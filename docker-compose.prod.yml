@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  web:
+    build: test_vk_api/.
+    env_file:
+      - env_private/web.env
+    environment:
+      - DJANGO_DEBUG=false
+    volumes:
+      - ./test_vk_api:/usr/src/test_vk_api
+    networks:
+      - nginx_network
+      - redis_network
+
+#  celery:
+#    build: ./test_vk_api/.
+#    env_file:
+#      - env_private/web.env
+#    volumes:
+#      - ./test_vk_api:/usr/src/test_vk_api
+#    depends_on:
+#      - redis
+#      - web
+#    command:
+#      - celery -A test_vk_api -l info
+
+  redis:
+    image: redis:alpine
+    networks:
+      - redis_network
+
+  proxy:
+#    build: proxy/.
+    image: nginx:1.17
+    volumes:
+    - ./proxy:/etc/nginx/conf.d
+    ports:
+      - 80:80
+    depends_on:
+      - web
+    networks:
+      - nginx_network
+
+networks:
+  nginx_network:
+    driver: bridge
+  redis_network:
+    driver: bridge
