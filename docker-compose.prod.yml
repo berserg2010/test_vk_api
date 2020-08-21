@@ -1,49 +1,39 @@
 version: '3'
 
 services:
-  web:
-    build: test_vk_api/.
-    env_file:
-      - env_private/web.env
+
+  backend:
     environment:
-      - DJANGO_DEBUG=false
+      - DJANGO_DEBUG=0
+      - HOST=0.0.0.0
+    ports:
+      - 8000
     volumes:
-      - ./test_vk_api:/usr/src/test_vk_api
+      - static_volume:/usr/src/test_vk_api/static
+      - media_volume:/usr/src/test_vk_api/media
+    user: root
     networks:
-      - nginx_network
-      - redis_network
-
-#  celery:
-#    build: ./test_vk_api/.
-#    env_file:
-#      - env_private/web.env
-#    volumes:
-#      - ./test_vk_api:/usr/src/test_vk_api
-#    depends_on:
-#      - redis
-#      - web
-#    command:
-#      - celery -A test_vk_api -l info
-
-  redis:
-    image: redis:alpine
-    networks:
-      - redis_network
+      - proxy_back
+    command:
+      [ "gunicorn", "--bind", ":8000", "backend.wsgi:application" ]
 
   proxy:
-#    build: proxy/.
     image: nginx:1.17
-    volumes:
-    - ./proxy:/etc/nginx/conf.d
     ports:
-      - 80:80
+      - 8000:80
+    volumes:
+      - ./proxy/backend.conf:/etc/nginx/conf.d/backend.conf
+      - static_volume:/usr/src/test_vk_api/static
+      - media_volume:/usr/src/test_vk_api/media
     depends_on:
-      - web
+      - backend
     networks:
-      - nginx_network
+      - proxy_back
+
+volumes:
+  static_volume:
+  media_volume:
 
 networks:
-  nginx_network:
-    driver: bridge
-  redis_network:
+  proxy_back:
     driver: bridge
